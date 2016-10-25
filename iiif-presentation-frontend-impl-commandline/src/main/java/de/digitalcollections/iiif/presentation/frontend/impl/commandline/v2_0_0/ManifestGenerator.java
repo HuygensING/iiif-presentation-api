@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.net.URISyntaxException;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -46,11 +47,22 @@ public class ManifestGenerator {
 
   public static void main(String[] args) throws ParseException, JsonProcessingException, IOException, URISyntaxException {
     Options options = new Options();
+    options.addOption("u", true, "Url prefix.");
+    options.addOption("o", true, "Output path for JSON file. Prints to stdout by default.");
     options.addOption("d", true, "Absolute file path to the directory containing the image files.");
 
     CommandLineParser parser = new DefaultParser();
     CommandLine cmd = parser.parse(options, args);
 
+    String urlPrefix = "http://www.yourdomain.com/iiif/presentation/2.0.0/";
+    String outputFile = "-";
+
+    if (cmd.hasOption("u")) {
+      urlPrefix = cmd.getOptionValue("u");
+    }
+    if (cmd.hasOption("o")) {
+      outputFile = cmd.getOptionValue("o");
+    }
     if (cmd.hasOption("d")) {
       String imageDirectoryPath = cmd.getOptionValue("d");
       Path imageDirectory = Paths.get(imageDirectoryPath);
@@ -89,7 +101,7 @@ public class ManifestGenerator {
         }
       });
 
-      generateManifest(imageDirectory.getFileName().toString(), files);
+      generateManifest(imageDirectory.getFileName().toString(), files, urlPrefix, outputFile);
     } else {
       // automatically generate the help statement
       HelpFormatter formatter = new HelpFormatter();
@@ -97,10 +109,9 @@ public class ManifestGenerator {
     }
   }
 
-  private static void generateManifest(final String imageDirectoryName, final List<Path> files)
+  private static void generateManifest(final String imageDirectoryName, final List<Path> files, String urlPrefix, String outputFile)
       throws JsonProcessingException, IOException, URISyntaxException {
     // Start Manifest
-    String urlPrefix = "http://www.yourdomain.com/iiif/presentation/2.0.0/";
     PropertyValue manifestLabel = new PropertyValueSimpleImpl("Manifest for " + imageDirectoryName);
     Manifest manifest = new ManifestImpl(urlPrefix + imageDirectoryName + "/manifest.json", manifestLabel);
 
@@ -122,13 +133,18 @@ public class ManifestGenerator {
 
     ManifestGenerator mg = new ManifestGenerator();
     String json = mg.generateJson(manifest);
-    System.out.println(json);
+    if (outputFile.equals("-")) {
+      System.out.println(json);
+    }else{
+      try(  PrintWriter out = new PrintWriter( outputFile )  ){
+        out.println( json );
+      }
+    }
   }
 
   private static void addPage(String urlPrefix, String imageDirectoryName, List<Canvas> canvases, int pageCounter, Path file)
       throws IOException, URISyntaxException {
     Path fileName = file.getFileName();
-    System.out.println(fileName.toAbsolutePath());
 
     BufferedImage bimg = ImageIO.read(file.toFile());
     int width = bimg.getWidth();
