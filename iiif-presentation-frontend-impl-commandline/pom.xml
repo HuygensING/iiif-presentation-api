@@ -26,6 +26,17 @@
       <artifactId>junit</artifactId>
       <scope>test</scope>
     </dependency>
+    <!--The order of the next two twelvemonkeys libs should not be changed. Weirdly it stops reading tiff if you change the order.-->
+    <dependency>
+      <groupId>com.twelvemonkeys.imageio</groupId>
+      <artifactId>imageio-tiff</artifactId>
+      <version>3.2.1</version>
+    </dependency>
+    <dependency>
+      <groupId>com.twelvemonkeys.imageio</groupId>
+      <artifactId>imageio-jpeg</artifactId>
+      <version>3.2.1</version>
+    </dependency>
   </dependencies>
   
   <build>

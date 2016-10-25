@@ -7,16 +7,11 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URISyntaxException;
-import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.SimpleFileVisitor;
-import java.nio.file.attribute.BasicFileAttributes;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import javax.imageio.ImageIO;
 
@@ -49,6 +44,7 @@ public class ManifestGenerator {
     Options options = new Options();
     options.addOption("u", true, "Url prefix.");
     options.addOption("o", true, "Output path for JSON file. Prints to stdout by default.");
+    options.addOption("x", true, "Filter by extension. Default is jpg.");
     options.addOption("d", true, "Absolute file path to the directory containing the image files.");
 
     CommandLineParser parser = new DefaultParser();
@@ -56,6 +52,7 @@ public class ManifestGenerator {
 
     String urlPrefix = "http://www.yourdomain.com/iiif/presentation/2.0.0/";
     String outputFile = "-";
+    String extension = "jpg";
 
     if (cmd.hasOption("u")) {
       urlPrefix = cmd.getOptionValue("u");
@@ -63,23 +60,22 @@ public class ManifestGenerator {
     if (cmd.hasOption("o")) {
       outputFile = cmd.getOptionValue("o");
     }
+    if (cmd.hasOption("x")) {
+      extension= cmd.getOptionValue("x");
+    }
     if (cmd.hasOption("d")) {
       String imageDirectoryPath = cmd.getOptionValue("d");
       Path imageDirectory = Paths.get(imageDirectoryPath);
-      final List<Path> files = new ArrayList<>();
+      List<Path> files = new ArrayList<>();
       try {
-        Files.walkFileTree(imageDirectory, new SimpleFileVisitor<Path>() {
-          @Override
-          public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-            if (!attrs.isDirectory()) {
-              // TODO there must be a more elegant solution for filtering jpeg files...
-              if (file.getFileName().toString().endsWith("jpg")) {
-                files.add(file);
-              }
-            }
-            return FileVisitResult.CONTINUE;
-          }
-        });
+
+        String finalExtension = extension;
+        files = Files.walk(imageDirectory)
+                .filter(Files::isRegularFile)
+                .filter(p -> p.getFileName()
+                                .toString().endsWith("."+ finalExtension))
+                .collect(Collectors.toList());
+
       } catch (IOException e) {
         e.printStackTrace();
       }
@@ -145,7 +141,6 @@ public class ManifestGenerator {
   private static void addPage(String urlPrefix, String imageDirectoryName, List<Canvas> canvases, int pageCounter, Path file)
       throws IOException, URISyntaxException {
     Path fileName = file.getFileName();
-
     BufferedImage bimg = ImageIO.read(file.toFile());
     int width = bimg.getWidth();
     int height = bimg.getHeight();
